@@ -1,0 +1,11 @@
+# depslib dependency file v1.0
+1490813891 source:c:\users\admin\documents\c++\sga\main.cpp
+	<iostream>
+	<math.h>
+	<stdio.h>
+	<stdlib.h>
+	<time.h>
+	<sstream>
+	<string>
+	<vector>
+
