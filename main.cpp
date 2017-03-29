@@ -13,7 +13,7 @@ const int LONG_CROMOSOMA = 30;
 const double COEF = (1 << LONG_CROMOSOMA) - 1;
 
 const int MAX_POP = 30;
-const int MAX_GEN = 10;
+const int MAX_GEN = 7;
 
 const double pCross = 0.6;
 const double pMutation = 0.01;
@@ -191,6 +191,7 @@ void printStats(int nroGen, const vector<Individuo*>& generacion){
     printf("   Best: %s (%f)\n",best_cromo.c_str(),generacion[best]->dec);
     printf("\n");
 
+    // descomentar para mostrar informacion por cada individuo
     printDetalle(generacion,best);
 }
 
