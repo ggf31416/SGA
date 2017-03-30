@@ -13,21 +13,32 @@ const int LONG_CROMOSOMA = 30;
 const double COEF = (1 << LONG_CROMOSOMA) - 1;
 
 const int MAX_POP = 30;
-const int MAX_GEN = 7;
+const int MAX_GEN = 20;
 
 const double pCross = 0.6;
 const double pMutation = 0.01;
+
+// usar escalado lineal para evitar perdida temprana de diversidad genetica?
+const double ESCALAR = false;
+
+// mostrar cada individuo?
+const double MOSTRAR_DETALLE = false;
 
 class Individuo{
 public:
     bool cromosoma[LONG_CROMOSOMA];
     int longitud;
     double fitness;
+    double scaled_fitness = -1;
     double dec;
-    int idx_padre1;
-    int idx_padre2;
-    int pos_cross;
-    int cant_mutaciones = 0;
+    int idx_padre1 = 0;
+    int idx_padre2 = 0;
+    int pos_cross = 0;
+    int cant_mutaciones;
+
+	Individuo() {
+		cant_mutaciones = 0;
+	}
 
     double decodificar(){
         long total = 0;
@@ -45,6 +56,7 @@ public:
     void Actualizar(){
         this->dec = decodificar();
         this->fitness = calcularFitness();
+        this->scaled_fitness = this->fitness;
     }
 
 };
@@ -123,12 +135,12 @@ string CromosomaString(Individuo* ind){
 
 
 // retorna la posicion a elegir segun ruleta entre 0 y len - 1
-int Select(const vector<Individuo*>& pop, double sumfitness ){
+int Select(const vector<Individuo*>& pop, double sum_scaled_fitness ){
     double suma = 0;
-    double punto_ruleta = random_float() * sumfitness;
+    double punto_ruleta = random_float() * sum_scaled_fitness;
 
     for(vector<Individuo*>::size_type i = 0; i < pop.size(); i++){
-        suma += pop[i]->fitness;
+        suma += pop[i]->scaled_fitness;
         if (suma >= punto_ruleta) return i;
     }
     return pop.size() - 1; // por errores de redondeo
@@ -143,56 +155,96 @@ void borrarVector(vector<Individuo*>& gen){
 
 void Generation(vector<Individuo*>& genActual,vector<Individuo*>& genNueva){
     borrarVector(genNueva);
-    double sumFitness = 0;
+    double sumScaledFitness = 0;
     for(vector<int>::size_type j = 0; j != genActual.size(); j++) {
-        sumFitness += genActual[j]->fitness;
+        sumScaledFitness += genActual[j]->scaled_fitness;
     }
     while(genNueva.size() < MAX_POP){
-        int mate1 = Select(genActual,sumFitness);
-        int mate2 = Select(genActual,sumFitness);
+        int mate1 = Select(genActual,sumScaledFitness);
+        int mate2 = Select(genActual,sumScaledFitness);
         Crossover(genActual,mate1,mate2,genNueva);
     }
 }
 
-void printDetalle(const vector<Individuo*>& generacion,int best){
-     printf("  idx %20s%10s %7s   %8s    mutac  fitness\n","cromosoma","","dec","padres");
+void printDetalle(const vector<Individuo*>& generacion, unsigned int best){
+     printf("  idx %20s%10s %7s   %4s  mutac  fitness scaled_fit\n","cromosoma","","dec","padres");
      for(vector<int>::size_type j = 0; j != generacion.size(); j++) {
          Individuo* ind = generacion[j];
          string cromo = CromosomaString(ind);
          if (ind->pos_cross == 0){
-             printf(" %c %2d: %s  %f     -     %2d    -> %f\n",(j == best ? '*' : ' '), (int)j,cromo.c_str(),ind->dec, ind->cant_mutaciones,ind->fitness);
+             printf(" %c %2d: %s  %.3f     -     %2d  -> %0.5f %0.5f\n",(j == best ? '*' : ' '), (int)j,cromo.c_str(),ind->dec, ind->cant_mutaciones,ind->fitness,ind->scaled_fitness);
          }
          else if (ind->pos_cross == LONG_CROMOSOMA){
-             printf(" %c %2d: %s  %f  [ %02d ]   %2d    -> %f\n",(j == best ? '*' : ' '), (int)j,cromo.c_str(),ind->dec,ind->idx_padre1, ind->cant_mutaciones,ind->fitness);
+             printf(" %c %2d: %s  %.3f  [ %02d ]   %2d  -> %0.5f %0.5f\n",(j == best ? '*' : ' '), (int)j,cromo.c_str(),ind->dec,ind->idx_padre1, ind->cant_mutaciones,ind->fitness,ind->scaled_fitness);
          }
          else{
-            printf(" %c %2d: %s  %f  %02d-%02d,%02d %2d    -> %f\n",(j == best ? '*' : ' '),(int)j,cromo.c_str(),ind->dec,ind->idx_padre1,ind->idx_padre2,ind->pos_cross, ind->cant_mutaciones,ind->fitness);
+            printf(" %c %2d: %s  %.3f  %02d-%02d,%02d %2d  -> %0.5f %0.5f\n",(j == best ? '*' : ' '),(int)j,cromo.c_str(),ind->dec,ind->idx_padre1,ind->idx_padre2,ind->pos_cross, ind->cant_mutaciones,ind->fitness,ind->scaled_fitness);
         }
     }
      printf("---------------------------------------------------------------------");
      printf("\n");
 }
 
-void printStats(int nroGen, const vector<Individuo*>& generacion){
+void getStats(const vector<Individuo*>& generacion, int& best, double& maxFitness,double& avgFitness,double& minFitness){
     double sumFitness = 0;
-    double maxFitness = 0;
-    int best = 0;
+    maxFitness = 0;
+    minFitness = 1000;
+    best = 0;
     for(vector<int>::size_type j = 0; j != generacion.size(); j++) {
         double fitness =  generacion[j]->fitness;
         if (fitness > maxFitness){
             maxFitness = fitness;
             best = (int)j;
         }
+        if (fitness < minFitness){
+            minFitness = fitness;
+        }
         sumFitness += fitness;
     }
-    double avgFitness = sumFitness / generacion.size();
+    avgFitness = sumFitness / generacion.size();
+
+}
+
+void printStats(int nroGen, const vector<Individuo*>& generacion, int best, double maxFitness, double avgFitness, double minFitness){
     string best_cromo = CromosomaString(generacion[best]);
-    printf("Gen: %d -> Size: %d Avg fit: %f Max fit: %f\n",nroGen,generacion.size(),avgFitness,maxFitness);
-    printf("   Best: %s (%f)\n",best_cromo.c_str(),generacion[best]->dec);
+    printf("Gen: %d -> Size: %d Min fit: %f Avg fit: %f MAX fit: %f \n",nroGen,generacion.size(),minFitness,avgFitness,maxFitness);
+    printf("   Best: %s (dec = %f)\n",best_cromo.c_str(),generacion[best]->dec);
     printf("\n");
 
-    // descomentar para mostrar informacion por cada individuo
-    printDetalle(generacion,best);
+    if (MOSTRAR_DETALLE){
+        printDetalle(generacion,best);
+    }
+}
+
+// dado umax, uavg, umin obtiene valores de a y b
+void prescale(double umax, double uavg, double umin, double &a, double &b) {
+	const double fmultiple = 2.0;
+	double delta;
+	if (umin > (fmultiple*uavg - umax) / (fmultiple - 1.0)) {
+		delta = umax - uavg;
+		a = (fmultiple - 1.0) * uavg / delta;
+		b = uavg * (umax - fmultiple*uavg) / delta;
+	} else {
+		delta = uavg - umin;
+		a = uavg / delta;
+		b = -umin * uavg / delta;
+	}
+}
+
+
+double scale(double u, double a, double b) {
+	return (a * u + b);
+}
+
+void scalepop(double max, double avg, double min, double &sumfitness, const vector<Individuo*>& pop) {
+	double a;
+	double b;
+	prescale(max, avg, min, a, b);
+	sumfitness = 0.0;
+	for(vector<Individuo*>::size_type j = 0; j < pop.size(); j++) {
+		pop[j]->scaled_fitness = scale(pop[j]->fitness, a, b);
+		sumfitness += pop[j]->scaled_fitness;
+	}
 }
 
 int main()
@@ -200,17 +252,30 @@ int main()
     /* initialize random seed: */
     srand (time(NULL));
     int pob_inicial = 30;
+    int best;
+    double avg_fit,min_fit,max_fit;
+    double sumfitness;
+
     vector<Individuo*> genActual;
     vector<Individuo*> genNueva;
     for(int i = 0; i < pob_inicial; i++){
         Individuo* ind = GenerarRandom();
         genActual.push_back(ind);
     }
-    printStats(0,genActual);
+    getStats(genActual,best,max_fit,avg_fit,min_fit);
+    if (ESCALAR){
+        scalepop(max_fit,avg_fit,min_fit,sumfitness,genActual);
+    }
+    printStats(0,genActual,best,max_fit,avg_fit,min_fit);
 
     for(int gen = 1; gen <= MAX_GEN; gen++){
         Generation(genActual,genNueva);
-        printStats(gen,genNueva);
+
+        getStats(genNueva,best,max_fit,avg_fit,min_fit);
+        if (ESCALAR){
+            scalepop(max_fit,avg_fit,min_fit,sumfitness,genNueva);
+        }
+        printStats(gen,genNueva,best,max_fit,avg_fit,min_fit);
 
         genActual.swap(genNueva);
     }
