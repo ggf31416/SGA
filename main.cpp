@@ -19,7 +19,7 @@ const double pCross = 0.6;
 const double pMutation = 0.01;
 
 // usar escalado lineal para evitar perdida temprana de diversidad genetica?
-const double ESCALAR = true;
+const double ESCALAR = false;
 
 // mostrar cada individuo?
 const double MOSTRAR_DETALLE = false;
