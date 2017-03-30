@@ -19,7 +19,7 @@ const double pCross = 0.6;
 const double pMutation = 0.01;
 
 // usar escalado lineal para evitar perdida temprana de diversidad genetica?
-const double ESCALAR = false;
+const double ESCALAR = true;
 
 // mostrar cada individuo?
 const double MOSTRAR_DETALLE = false;
@@ -236,14 +236,14 @@ double scale(double u, double a, double b) {
 	return (a * u + b);
 }
 
-void scalepop(double max, double avg, double min, double &sumfitness, const vector<Individuo*>& pop) {
+void scalepop(double max, double avg, double min, const vector<Individuo*>& pop) {
 	double a;
 	double b;
 	prescale(max, avg, min, a, b);
-	sumfitness = 0.0;
+	//sumfitness = 0.0;
 	for(vector<Individuo*>::size_type j = 0; j < pop.size(); j++) {
 		pop[j]->scaled_fitness = scale(pop[j]->fitness, a, b);
-		sumfitness += pop[j]->scaled_fitness;
+		//sumfitness += pop[j]->scaled_fitness;
 	}
 }
 
@@ -254,7 +254,7 @@ int main()
     int pob_inicial = 30;
     int best;
     double avg_fit,min_fit,max_fit;
-    double sumfitness;
+    //double sumfitness;
 
     vector<Individuo*> genActual;
     vector<Individuo*> genNueva;
@@ -264,7 +264,7 @@ int main()
     }
     getStats(genActual,best,max_fit,avg_fit,min_fit);
     if (ESCALAR){
-        scalepop(max_fit,avg_fit,min_fit,sumfitness,genActual);
+        scalepop(max_fit,avg_fit,min_fit,genActual);
     }
     printStats(0,genActual,best,max_fit,avg_fit,min_fit);
 
@@ -273,7 +273,7 @@ int main()
 
         getStats(genNueva,best,max_fit,avg_fit,min_fit);
         if (ESCALAR){
-            scalepop(max_fit,avg_fit,min_fit,sumfitness,genNueva);
+            scalepop(max_fit,avg_fit,min_fit,genNueva);
         }
         printStats(gen,genNueva,best,max_fit,avg_fit,min_fit);
 
