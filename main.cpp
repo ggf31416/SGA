@@ -291,10 +291,10 @@ int main()
         Correr(maxFits);
     }
     if (ESCALAR){
-         printf("Config: Escalar = TRUE, fmultiple = %f\n\n",fmultiple);
+         printf("Config: Escalar = TRUE, fmultiple = %f, pcross = %.2f, pmutacion = %.3f\n\n",fmultiple,pCross,pMutation);
     }
     else{
-         printf("Config: Escalar = FALSE\n\n");
+         printf("Config: Escalar = FALSE, pcross = %.2f, pmutacion = %.3f\n\n",pCross,pMutation);
     }
 
     printf("Promedio de fitness del mejor de cada gen. sobre %d rounds:\n",corridas );
