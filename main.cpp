@@ -13,13 +13,15 @@ const int LONG_CROMOSOMA = 30;
 const double COEF = (1 << LONG_CROMOSOMA) - 1;
 
 const int MAX_POP = 30;
-const int MAX_GEN = 20;
+const int MAX_GEN = 100;
 
 const double pCross = 0.6;
 const double pMutation = 0.01;
 
+
 // usar escalado lineal para evitar perdida temprana de diversidad genetica?
-const double ESCALAR = false;
+const double ESCALAR = true;
+const double fmultiple = 2.5;
 
 // mostrar cada individuo?
 const double MOSTRAR_DETALLE = false;
@@ -218,7 +220,7 @@ void printStats(int nroGen, const vector<Individuo*>& generacion, int best, doub
 
 // dado umax, uavg, umin obtiene valores de a y b
 void prescale(double umax, double uavg, double umin, double &a, double &b) {
-	const double fmultiple = 2.0;
+
 	double delta;
 	if (umin > (fmultiple*uavg - umax) / (fmultiple - 1.0)) {
 		delta = umax - uavg;
@@ -247,10 +249,7 @@ void scalepop(double max, double avg, double min, const vector<Individuo*>& pop)
 	}
 }
 
-int main()
-{
-    /* initialize random seed: */
-    srand (time(NULL));
+void Correr(double* sumaMaxFit ){
     int pob_inicial = 30;
     int best;
     double avg_fit,min_fit,max_fit;
@@ -267,11 +266,12 @@ int main()
         scalepop(max_fit,avg_fit,min_fit,genActual);
     }
     printStats(0,genActual,best,max_fit,avg_fit,min_fit);
-
+    sumaMaxFit[0] += max_fit;
     for(int gen = 1; gen <= MAX_GEN; gen++){
         Generation(genActual,genNueva);
 
         getStats(genNueva,best,max_fit,avg_fit,min_fit);
+        sumaMaxFit[gen] += max_fit;
         if (ESCALAR){
             scalepop(max_fit,avg_fit,min_fit,genNueva);
         }
@@ -279,7 +279,28 @@ int main()
 
         genActual.swap(genNueva);
     }
+}
 
+int main()
+{
+    /* initialize random seed: */
+    srand (time(NULL));
+    double maxFits[MAX_GEN + 1] = {}; // inicializa en 0
+    int corridas = 200;
+    for(int i = 0; i < corridas; i++){
+        Correr(maxFits);
+    }
+    if (ESCALAR){
+         printf("Config: Escalar = TRUE, fmultiple = %f\n\n",fmultiple);
+    }
+    else{
+         printf("Config: Escalar = FALSE\n\n");
+    }
+
+    printf("Promedio de fitness del mejor de cada gen. sobre %d rounds:\n",corridas );
+    for(int i = 0; i <= MAX_GEN; i++){
+        printf("   AvgMax gen %2d: %.5f\n",i,maxFits[i] / corridas);
+    }
     return 0;
 
 }
